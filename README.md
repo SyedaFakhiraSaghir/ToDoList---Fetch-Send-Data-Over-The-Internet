@@ -1,16 +1,25 @@
-# hello_world
+22k4413 - syeda fakhira saghir
+22k4461 - Rakhshanda Parveen
+22K-4301 - Ali Jafar
+22K-4473 - Jaswant Lal
 
-A new Flutter project.
+Todo List UI: A simple, frontend-only Flutter application demonstrating a clean todo list user interface. Built with Material Design 3 principles.
 
-## Getting Started
+Features:
+Static todo list with four sample items
+Interactive checkboxes (visual only)
+Clean input field for adding new todos
+Modern Material You theming with custom seed color
+Responsive layout using Row and Column widgets
 
-This project is a starting point for a Flutter application.
+UI Components:
+App bar with "Todo List" title
+Checkbox + text combinations for todo items
+Text field with "Add a todo" placeholder
+Elevated "Add" button
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Technical Details:
+Flutter framework
+Material Design 3
+Stateless widgets throughout
+No state management (frontend demo)
