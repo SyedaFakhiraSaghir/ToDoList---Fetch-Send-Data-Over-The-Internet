@@ -1,11 +1,8 @@
 /*
 Assignment #1 - 
-22k4413 - 
-syeda fakhira saghir
-22k4461 - 
-Rakhshanda Parveen
-22K-4301 - 
-Ali Jafar
+22k4413 - syeda fakhira saghir
+22k4461 - Rakhshanda Parveen
+22K-4301 - Ali Jafar
 22K-4473 - Jaswant Lal
 */
 
@@ -52,14 +49,43 @@ class Todo {
     required this.createdAt,
   });
 
-  // From JSON
+  // From JSON with better parsing
   factory Todo.fromJson(Map<String, dynamic> json) {
+    print('📦 Parsing Todo JSON: $json'); // Debug print
+    
+    // Handle different possible response formats
+    String title = 'Untitled';
+    if (json['title'] != null && json['title'].toString().isNotEmpty) {
+      title = json['title'].toString();
+    }
+    
+    String description = '';
+    if (json['description'] != null && json['description'].toString().isNotEmpty) {
+      description = json['description'].toString();
+    }
+    
+    bool completed = false;
+    if (json['completed'] != null) {
+      completed = json['completed'] == true || json['completed'] == 'true';
+    }
+    
+    DateTime createdAt;
+    try {
+      if (json['createdAt'] != null) {
+        createdAt = DateTime.parse(json['createdAt'].toString());
+      } else {
+        createdAt = DateTime.now();
+      }
+    } catch (e) {
+      createdAt = DateTime.now();
+    }
+    
     return Todo(
       id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      completed: json['completed'] ?? false,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      title: title,
+      description: description,
+      completed: completed,
+      createdAt: createdAt,
     );
   }
 
@@ -106,7 +132,7 @@ class TodoResponse {
 
   factory TodoResponse.fromJson(Map<String, dynamic> json) {
     List<Todo> todoList = [];
-    if (json['data'] != null) {
+    if (json['data'] != null && json['data'] is List) {
       todoList = List<Map<String, dynamic>>.from(json['data'])
           .map((todoJson) => Todo.fromJson(todoJson))
           .toList();
@@ -151,36 +177,41 @@ class ApiService {
   // Get todos with pagination
   static Future<TodoResponse> getTodos({int page = 1}) async {
     try {
+      print('📡 Fetching todos page $page');
       final response = await http.get(
         Uri.parse('$baseUrl?page=$page&limit=$pageSize'),
       );
 
       if (response.statusCode == 200) {
+        print('✅ Got response: ${response.body.substring(0, min(100, response.body.length))}...');
         return TodoResponse.fromJson(json.decode(response.body));
       } else {
         throw Exception('Failed to load todos: ${response.statusCode}');
       }
     } catch (e) {
+      print('❌ Error fetching todos: $e');
       throw Exception('Network error: $e');
     }
   }
 
-  // Create new todo - FIXED: Returns success with local ID
+  // Create new todo
   static Future<Todo> createTodo(CreateTodoRequest request) async {
     try {
+      print('📤 Creating todo: ${request.title}');
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(request.toJson()),
       );
 
-      // If API call succeeds, return the response
+      print('📥 Create response status: ${response.statusCode}');
+      print('📥 Create response body: ${response.body}');
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         return Todo.fromJson(json.decode(response.body));
       } else {
-        // If API fails (likely read-only), create a local todo
-        // This ensures the UI still works
-        print('API POST failed with status ${response.statusCode}, using local todo');
+        // Create a local todo with the data we have
+        print('⚠️ API POST failed, using local todo');
         return Todo(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: request.title,
@@ -190,8 +221,8 @@ class ApiService {
         );
       }
     } catch (e) {
-      // Network error - still create local todo
-      print('Network error: $e, using local todo');
+      print('❌ Network error in createTodo: $e');
+      // Return a local todo so the UI still shows the item
       return Todo(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: request.title,
@@ -202,7 +233,7 @@ class ApiService {
     }
   }
 
-  // Update todo - FIXED: Returns success with updated state
+  // Update todo
   static Future<Todo> updateTodo(String id, bool completed) async {
     try {
       final response = await http.put(
@@ -214,9 +245,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return Todo.fromJson(json.decode(response.body));
       } else {
-        // If API fails, return a success response anyway
-        // This maintains the optimistic update
-        print('API PUT failed with status ${response.statusCode}, using local update');
+        // Return a todo with the updated state
         return Todo(
           id: id,
           title: 'Updated Todo',
@@ -226,7 +255,6 @@ class ApiService {
         );
       }
     } catch (e) {
-      // Network error - still return success for optimistic update
       print('Network error: $e, using local update');
       return Todo(
         id: id,
@@ -249,7 +277,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Todo> _todos = [];
-  List<Todo> _allFetchedTodos = []; // Store all fetched todos separately
+  List<Todo> _allFetchedTodos = [];
   int _currentPage = 1;
   int _totalTodos = 0;
   bool _isLoading = false;
@@ -296,7 +324,7 @@ class _MyHomePageState extends State<MyHomePage> {
       final response = await ApiService.getTodos(page: 1);
       setState(() {
         _allFetchedTodos = response.todos;
-        _todos = List.from(_allFetchedTodos); // Start with fetched todos
+        _todos = List.from(_allFetchedTodos);
         _totalTodos = response.total;
         _isLoading = false;
       });
@@ -332,7 +360,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         _isLoadingMore = false;
       });
-      _showErrorSnackBar('Failed to load more todos');
+      _showSideSnackBar('Failed to load more todos', isError: true);
     }
   }
 
@@ -358,27 +386,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
       final newTodo = await ApiService.createTodo(request);
       
+      // Ensure the todo has the correct data
+      final todoToAdd = newTodo.copyWith(
+        title: request.title,
+        description: request.description,
+      );
+      
       setState(() {
-        // Add to both lists
-        _todos.insert(0, newTodo);
-        _allFetchedTodos.insert(0, newTodo);
-        _totalTodos++; // Increment total count
+        _todos.insert(0, todoToAdd);
+        _allFetchedTodos.insert(0, todoToAdd);
+        _totalTodos++;
         _isSubmitting = false;
       });
 
-      // Clear form
       _titleController.clear();
       _descriptionController.clear();
       
-      // Close bottom sheet
       Navigator.pop(context);
       
-      _showSuccessSnackBar('Todo added successfully');
+      _showSideSnackBar('Todo added successfully');
     } catch (e) {
       setState(() {
         _isSubmitting = false;
       });
-      _showErrorSnackBar('Failed to add todo: ${e.toString().replaceAll('Exception:', '').trim()}');
+      _showSideSnackBar('Failed to add todo', isError: true);
     }
   }
 
@@ -386,14 +417,12 @@ class _MyHomePageState extends State<MyHomePage> {
     final newCompletedState = !todo.completed;
     final originalTodo = todo;
     
-    // Optimistic update
     setState(() {
       final index = _todos.indexWhere((t) => t.id == todo.id);
       if (index != -1) {
         _todos[index] = todo.copyWith(completed: newCompletedState);
       }
       
-      // Also update in allFetchedTodos
       final allIndex = _allFetchedTodos.indexWhere((t) => t.id == todo.id);
       if (allIndex != -1) {
         _allFetchedTodos[allIndex] = todo.copyWith(completed: newCompletedState);
@@ -402,9 +431,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     try {
       await ApiService.updateTodo(todo.id, newCompletedState);
-      _showSuccessSnackBar('Todo updated successfully');
+      _showSideSnackBar('Todo updated successfully');
     } catch (e) {
-      // Revert on error
       setState(() {
         final index = _todos.indexWhere((t) => t.id == todo.id);
         if (index != -1) {
@@ -416,10 +444,158 @@ class _MyHomePageState extends State<MyHomePage> {
           _allFetchedTodos[allIndex] = originalTodo;
         }
       });
-      _showErrorSnackBar('Failed to update todo');
+      _showSideSnackBar('Failed to update todo', isError: true);
     }
   }
 
+void _showAddTodoDialog() {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: animation,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dialogBackgroundColor,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Add New Todo',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: InputDecoration(
+                            labelText: 'Title',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.title),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Title is required';
+                            }
+                            return null;
+                          },
+                          autofocus: true,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.description),
+                          ),
+                          maxLines: 3,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Description is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () {
+                                        _titleController.clear();
+                                        _descriptionController.clear();
+                                        Navigator.pop(context);
+                                      },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isSubmitting ? null : _addTodo,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text('Add Todo'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
   void _showAddTodoBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -497,24 +673,62 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
+  // New side snackbar method
+  void _showSideSnackBar(String message, {bool isError = false}) {
+    final overlay = Overlay.of(context);
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isError ? Colors.red : Colors.green,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isError ? Icons.error_outline : Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  message,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
+
+    overlay.insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
+  // Keep original snackbar methods for compatibility
+  void _showErrorSnackBar(String message) {
+    _showSideSnackBar(message, isError: true);
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    _showSideSnackBar(message);
   }
 
   @override
@@ -535,7 +749,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: _buildBody(),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTodoBottomSheet,
+        onPressed: _showAddTodoDialog,
         icon: const Icon(Icons.add),
         label: const Text('Add Todo'),
       ),
@@ -618,7 +832,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onChanged: (_) => _toggleTodo(todo),
             ),
             title: Text(
-              todo.title,
+              todo.title.isNotEmpty ? todo.title : 'Untitled',
               style: TextStyle(
                 decoration: todo.completed ? TextDecoration.lineThrough : null,
                 color: todo.completed ? Colors.grey : null,
@@ -626,7 +840,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             subtitle: Text(
-              todo.description,
+              todo.description.isNotEmpty ? todo.description : 'No description',
               style: TextStyle(
                 color: todo.completed ? Colors.grey : null,
               ),
@@ -658,3 +872,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 }
+
+// Helper function for substring
+int min(int a, int b) => a < b ? a : b;
