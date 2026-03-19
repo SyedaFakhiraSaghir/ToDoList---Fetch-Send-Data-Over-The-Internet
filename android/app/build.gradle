@@ -1,8 +1,8 @@
 plugins {
-    id "com.android.application"
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.android.application" version "8.1.1" apply false
 }
 
 android {
@@ -37,6 +37,17 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+    buildscript {
+    ext.kotlin_version = '1.7.10'  // or whatever version
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.1'  // Change this to 8.1.1
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
 }
 
 flutter {
