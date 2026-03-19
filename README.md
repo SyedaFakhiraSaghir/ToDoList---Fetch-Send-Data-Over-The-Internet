@@ -5,9 +5,6 @@ Assignment #1 -
 22K-4301 - Ali Jafar
 22K-4473 - Jaswant Lal
 
-<img width="426" height="808" alt="image" src="https://github.com/user-attachments/assets/b5bcb947-c3d0-4f0b-9893-c8ef1e6ba727" /><img width="426" height="808" alt="image" src="https://github.com/user-attachments/assets/841a1bcc-6a42-40af-9ba1-e66657c34f39" /># todo_list
-
-
 A new Flutter project.
 
 # 📝 Todo List App - Fetch & Send Data Over The Internet
@@ -26,6 +23,11 @@ A feature-rich Todo List application built with Flutter that demonstrates best p
 - ✅ **Error Handling** - User-friendly error messages and retry options
 - ✅ **Loading Indicators** - Visual feedback during network operations
 - ✅ **Side Snackbars** - Non-intrusive notifications at bottom-right
+
+<img width="407" height="789" alt="image" src="https://github.com/user-attachments/assets/17711e60-de7a-42a1-a833-1e965eddc9ee" />
+
+
+<img width="426" height="808" alt="image" src="https://github.com/user-attachments/assets/b5bcb947-c3d0-4f0b-9893-c8ef1e6ba727" />
 
 ## 🛠️ Technologies Used
 
